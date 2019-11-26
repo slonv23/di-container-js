@@ -21,9 +21,22 @@ export default class DiContainer {
     /**
      * @param {symbol|string} componentRef 
      * @param {Function} classRef - reference to a class 
+     * @param {object} config 
      */
-    registerClass(componentRef, classRef) {
-        this.dependencyProviders[componentRef] = new ComponentProvider(classRef);
+    registerClass(componentRef, classRef, config) {
+        this.dependencyProviders[componentRef] = new ComponentProvider(classRef, config);
+    }
+
+    /**
+     * @param {symbol|string} componentRef 
+     * @param {object} config 
+     */
+    configure(componentRef, config) {
+        if (!this.isProvided(componentRef)) {
+            throw new Error(`Cannot configure component '${componentRef.toString()}' because it is not provided`);
+        }
+        
+        this.dependencyProviders[componentRef].setConfig(config);
     }
 
     /**
@@ -46,12 +59,20 @@ export default class DiContainer {
         return Object.prototype.hasOwnProperty.call(this.instances, componentRef);
     }
 
+    /**
+     * @param {symbol|string} componentRef 
+     * @returns {boolean}
+     */
+    isProvided(componentRef) {
+        return Object.prototype.hasOwnProperty.call(this.dependencyProviders, componentRef);
+    }
+
     _initInstance(componentRef) {
         const dependencyGraph = this._buildDependencyGraph(componentRef)
 
         let lowestLevel = dependencyGraph.nodes.reduce((p, v) => {
             return (p.level > v.level ? p.level : v.level);
-        });
+        }, dependencyGraph.nodes[0].level);
 
         for (let i = lowestLevel; i >= 0; i--) {
             // init components on the lowest level first, because they don't have dependencies
@@ -109,7 +130,7 @@ export default class DiContainer {
         this.dependencyGraphs[dependencyRef] = dependencySubGraph;
 
         this.dependencyProviders[dependencyRef].getDependencies().forEach(arg => {
-            if (!Object.prototype.hasOwnProperty.call(this.dependencyProviders, arg)) {
+            if (!this.isProvided(arg)) {
                 throw new Error(`Unsatisfied dependency '${arg.toString()}' for component '${dependencyRef.toString()}'`);
             }
 

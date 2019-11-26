@@ -2,7 +2,7 @@
 
 Dependency injection library for js with zero dependencies
 
-## Usage
+## Basic usage
 
 ```javascript
 import DiContainer from "di-container-js";
@@ -37,4 +37,30 @@ diContainer.registerClass(componentRef2, Component2);
 
 let component2Instance = diContainer.get(componentRef2);
 // now component2Instance has component1 assigned to it
+```
+
+## Providing configuration
+
+```javascript
+...
+
+class TestClass {
+
+    constructor() {
+    }
+
+    postConstruct(config) {
+        // gets called by DI container after instance created
+    }
+
+}
+
+let diContainer = new DiContainer();
+// pass configuration as third parameter to .registerClass
+diContainer.registerClass("testDependency", TestClass, {configKey: "configValue"});
+// OR
+// provide config using .configure method
+diContainer.configure("testDependency", {configKey: "configValue"});
+
+diContainer.get("testDependency");
 ```

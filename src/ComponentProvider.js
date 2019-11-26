@@ -6,17 +6,25 @@ export default class ComponentProvider {
 
     classRef;
 
-    constructor(classRef) {
+    constructor(classRef, config) {
         if (typeof(classRef.dependencies) === "function") {
             this.dependencies = classRef.dependencies();
         } else {
             this.dependencies = getArgNames(classRef.constructor);
         }
         this.classRef = classRef;
+        this.config = config;
     }
 
     provide() {
-        return new this.classRef(...arguments); //Reflect.construct(this.classRef, arguments);
+        let instance = new this.classRef(...arguments);
+        if (this.config !== undefined && (typeof instance.postConstruct === 'function')) {
+            instance.postConstruct(this.config);
+        }
+    }
+
+    setConfig(config) {
+        this.config = config;
     }
 
     getDependencies() {
