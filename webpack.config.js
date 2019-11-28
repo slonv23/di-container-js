@@ -3,9 +3,9 @@ const path = require('path');
 
 const serverConfig = {
   entry: './src/index.js',
-  mode: 'development',
-  //mode: 'production',
+  mode: 'production',
   target: 'node',
+  // mode: 'development',
   // devtool: 'inline-source-map',
   output: {
     filename: 'lib.node.js',
