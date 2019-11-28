@@ -35,8 +35,11 @@ class Component1 {
 diContainer.registerClass(componentRef1, Component1);
 diContainer.registerClass(componentRef2, Component2);
 
-let component2Instance = diContainer.get(componentRef2);
-// now component2Instance has component1 assigned to it
+(async () => {
+    // .get method returns promise resolved to dependency instance
+    let component2Instance = await diContainer.get(componentRef2);
+    // now component2Instance has component1 assigned to it
+})();
 ```
 
 ## Providing configuration
@@ -51,6 +54,9 @@ class TestClass {
 
     postConstruct(config) {
         // gets called by DI container after instance created
+        // can return promise, in this case DI container will
+        // wait util promise resolved
+        return Promise.resolved();
     }
 
 }
@@ -62,5 +68,8 @@ diContainer.registerClass("testDependency", TestClass, {configKey: "configValue"
 // provide config using .configure method
 diContainer.configure("testDependency", {configKey: "configValue"});
 
-diContainer.get("testDependency");
+(async () => {
+    let testDependency = await diContainer.get("testDependency");
+    // do something
+})();
 ```

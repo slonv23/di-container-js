@@ -41,11 +41,11 @@ export default class DiContainer {
 
     /**
      * @param {symbol|string} componentRef
-     * @returns {any}
+     * @returns {Promise<any>}
      */
     get(componentRef) {
         if (!this.isInitialized(componentRef)) {
-            this._initInstance(componentRef);
+            return this._initInstance(componentRef).then(() => this.instances[componentRef]);
         }
 
         return this.instances[componentRef];
@@ -67,7 +67,7 @@ export default class DiContainer {
         return Object.prototype.hasOwnProperty.call(this.dependencyProviders, componentRef);
     }
 
-    _initInstance(componentRef) {
+    async _initInstance(componentRef) {
         const dependencyGraph = this._buildDependencyGraph(componentRef)
 
         let lowestLevel = dependencyGraph.nodes.reduce((p, v) => {
@@ -93,7 +93,7 @@ export default class DiContainer {
                         resolvedDependencies.push(this.instances[childNode.dependencyRef]);
                     }
 
-                    this.instances[node.dependencyRef] = this.dependencyProviders[node.dependencyRef].provide(...resolvedDependencies);
+                    this.instances[node.dependencyRef] = await this.dependencyProviders[node.dependencyRef].provide(...resolvedDependencies);
                 }
             }
         }

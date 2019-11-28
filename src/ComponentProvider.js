@@ -16,11 +16,19 @@ export default class ComponentProvider {
         this.config = config;
     }
 
+    /**
+     * @returns {Promise<any>}
+     */
     provide() {
         let instance = new this.classRef(...arguments);
         if (this.config !== undefined && (typeof instance.postConstruct === 'function')) {
-            instance.postConstruct(this.config);
+            let result = instance.postConstruct(this.config);
+            if (result instanceof Promise) {
+                return result.then(() => instance);
+            }
         }
+
+        return Promise.resolve(instance);
     }
 
     setConfig(config) {
