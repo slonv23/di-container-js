@@ -4,10 +4,6 @@ const path = require('path');
 const serverConfig = {
   entry: './src/index.js',
   mode: 'development',
-  optimization: {
-		// We no not want to minimize our code.
-		minimize: false
-	},
   //mode: 'production',
   target: 'node',
   // devtool: 'inline-source-map',
