@@ -71,8 +71,8 @@ export default class DiContainer {
         const dependencyGraph = this._buildDependencyGraph(componentRef)
 
         let lowestLevel = dependencyGraph.nodes.reduce((p, v) => {
-            return (p.level > v.level ? p.level : v.level);
-        }, dependencyGraph.nodes[0].level);
+            return (p.level > v.level ? p : v);
+        }, dependencyGraph.nodes[0]).level;
 
         for (let i = lowestLevel; i >= 0; i--) {
             // init components on the lowest level first, because they don't have dependencies
