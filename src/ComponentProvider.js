@@ -10,7 +10,7 @@ export default class ComponentProvider {
         if (typeof(classRef.dependencies) === "function") {
             this.dependencies = classRef.dependencies();
         } else {
-            this.dependencies = getArgNames(classRef.constructor);
+            this.dependencies = getArgNames(classRef.prototype.constructor);
         }
         this.classRef = classRef;
         this.config = config;

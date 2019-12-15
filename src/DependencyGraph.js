@@ -1,10 +1,10 @@
-export default class DependencyGraph {
+/**
+ * @typedef {object} Node
+ * @property {number} level
+ * @property {string} dependencyRef
+ */
 
-    /**
-     * @typedef {object} Node
-     * @property {number} level
-     * @property {string} dependencyRef
-     */
+export default class DependencyGraph {
 
     /**
      * @type {Node[]}
@@ -12,7 +12,7 @@ export default class DependencyGraph {
     nodes = [];
 
     /**
-     * @param {string} dependencyRef
+     * @param {string} [dependencyRef]
      * @param {number} level 
      */
     constructor(dependencyRef, level = 0) {

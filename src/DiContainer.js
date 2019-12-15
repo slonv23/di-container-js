@@ -110,8 +110,8 @@ export default class DiContainer {
                     .map((e) => e.toString())
                     .join(' -> ');
                 console.error(`Cyclic dependency found ${requestChain} -> ${e.requiredComponent}`); 
-                throw e;
             }
+            throw e;
         }
     }
 

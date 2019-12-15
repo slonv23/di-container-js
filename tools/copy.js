@@ -1,6 +1,6 @@
 /* eslint-env node */
 const { writeFileSync, copyFileSync } = require('fs');
-const { resolve } = require('path');
+const { resolve, join } = require('path');
 // @ts-ignore
 const packageJson = require('../package.json');
 
@@ -12,6 +12,7 @@ function main() {
   const distPackageJson = createDistPackageJson(packageJson);
 
   copyFileSync(resolve(projectRoot, 'README.md'), resolve(distPath, 'README.md'));
+  copyFileSync(resolve(join(projectRoot, 'src'), 'index.d.ts'), resolve(distPath, 'index.d.ts'));
   writeFileSync(resolve(distPath, 'package.json'), distPackageJson);
 }
 
