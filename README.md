@@ -42,6 +42,14 @@ diContainer.registerClass(componentRef2, Component2);
 })();
 ```
 
+You can also inject diContainer itself to any component:
+```javascript
+constructor(diContainer, ...) {
+    this.diContainer = diContainer;
+    ...
+}
+```
+
 ## Providing configuration
 
 ```javascript
