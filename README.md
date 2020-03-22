@@ -1,3 +1,5 @@
+![Lint](https://github.com/slonv23/di-container-js/workflows/Lint/badge.svg?branch=master)
+
 # DI container
 
 Dependency injection library for js with zero dependencies
