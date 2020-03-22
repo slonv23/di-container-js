@@ -2,6 +2,8 @@ import CyclicDependencyError from "./CyclicDependencyError";
 import DependencyGraph from "./DependencyGraph";
 import ComponentProvider from "./ComponentProvider";
 
+const diContainerRef = "diContainer";
+
 export default class DiContainer {
 
     instances = {};
@@ -10,11 +12,18 @@ export default class DiContainer {
 
     dependencyGraphs = {};
 
+    constructor() {
+        this.instances[diContainerRef] = this;
+    }
+
     /**
      * @param {symbol|string} componentRef 
      * @param {ComponentProvider} componentProvider 
      */
     register(componentRef, componentProvider) {
+        if (componentRef === diContainerRef) {
+            throw new Error(`"${diContainerRef}" is not owerwritable component`);
+        }
         this.dependencyProviders[componentRef] = componentProvider;
     }
 
@@ -24,7 +33,7 @@ export default class DiContainer {
      * @param {object} config 
      */
     registerClass(componentRef, classRef, config) {
-        this.dependencyProviders[componentRef] = new ComponentProvider(classRef, config);
+        this.register(componentRef, new ComponentProvider(classRef, config));
     }
 
     /**
@@ -82,9 +91,13 @@ export default class DiContainer {
                     let resolvedDependencies = [];
                     for (let k = j + 1; k < dependencyGraph.nodes.length; k++) {
                         let childNode = dependencyGraph.nodes[k];
-                        if (childNode.level != (node.level + 1)) {
+                        if (childNode.level <= node.level) {
                             // not a child node, all child nodes are passed
                             break;
+                        }
+                        if (childNode.level > (node.level + 1)) {
+                            // not a direct child node
+                            continue;
                         }
 
                         console.assert((childNode.dependencyRef in this.instances),
@@ -129,12 +142,12 @@ export default class DiContainer {
         dependencySubGraph = new DependencyGraph(dependencyRef, level);
         this.dependencyGraphs[dependencyRef] = dependencySubGraph;
 
-        this.dependencyProviders[dependencyRef].getDependencies().forEach(arg => {
-            if (!this.isProvided(arg)) {
-                throw new Error(`Unsatisfied dependency '${arg.toString()}' for component '${dependencyRef.toString()}'`);
-            }
+        if (this.dependencyProviders[dependencyRef]) {
+            this.dependencyProviders[dependencyRef].getDependencies().forEach(arg => {
+                if (!this.instances[arg] && !this.isProvided(arg)) {
+                    throw new Error(`Unsatisfied dependency '${arg.toString()}' for component '${dependencyRef.toString()}'`);
+                }
 
-            if (!this.instances[arg]) {
                 try {
                     this._addDependencySubGraph(arg, dependencySubGraph, level + 1);
                 } catch (e) {
@@ -144,8 +157,8 @@ export default class DiContainer {
 
                     throw e;
                 }
-            }
-        });
+            });
+        }
 
         superGraph.addDependencies(dependencySubGraph);
     }

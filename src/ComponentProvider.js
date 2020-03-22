@@ -21,7 +21,7 @@ export default class ComponentProvider {
      */
     provide() {
         let instance = new this.classRef(...arguments);
-        if (this.config !== undefined && (typeof instance.postConstruct === 'function')) {
+        if (typeof instance.postConstruct === 'function') {
             let result = instance.postConstruct(this.config);
             if (result instanceof Promise) {
                 return result.then(() => instance);
