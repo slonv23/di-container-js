@@ -11,6 +11,16 @@ export default class ComponentProvider {
             this.dependencies = classRef.dependencies();
         } else {
             this.dependencies = getArgNames(classRef.prototype.constructor);
+            // is constructor omitted?
+            let ancestor = Object.getPrototypeOf(classRef);
+            while (!this.dependencies.length) {
+                if (ancestor === Function.prototype) {
+                    // default constructor, no more ancestors
+                    break;
+                }
+                this.dependencies = getArgNames(ancestor.prototype.constructor);
+                ancestor = Object.getPrototypeOf(ancestor);
+            }
         }
         this.classRef = classRef;
         this.config = config;
