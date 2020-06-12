@@ -27,7 +27,7 @@ export default class ComponentProvider {
     }
 
     /**
-     * @returns {Promise<any>}
+     * @returns {Promise<*>}
      */
     provide() {
         let instance = new this.classRef(...arguments);
@@ -39,6 +39,14 @@ export default class ComponentProvider {
         }
 
         return Promise.resolve(instance);
+    }
+
+    mergeConfig(config) {
+        if (!this.config) {
+            this.config = config;
+        } else {
+            this.config = Object.assign({}, this.config, config);
+        }
     }
 
     setConfig(config) {

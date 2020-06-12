@@ -17,8 +17,8 @@ export default class DiContainer {
     }
 
     /**
-     * @param {symbol|string} componentRef 
-     * @param {ComponentProvider} componentProvider 
+     * @param {symbol|string} componentRef
+     * @param {ComponentProvider} componentProvider
      */
     register(componentRef, componentProvider) {
         if (componentRef === diContainerRef) {
@@ -28,24 +28,29 @@ export default class DiContainer {
     }
 
     /**
-     * @param {symbol|string} componentRef 
-     * @param {Function} classRef - reference to a class 
-     * @param {object} config 
+     * @param {symbol|string} componentRef
+     * @param {Function} classRef - reference to a class
+     * @param {object} [config]
      */
     registerClass(componentRef, classRef, config) {
         this.register(componentRef, new ComponentProvider(classRef, config));
     }
 
     /**
-     * @param {symbol|string} componentRef 
-     * @param {object} config 
+     * @param {symbol|string} componentRef
+     * @param {object} config
+     * @param {boolean} mergeConfig
      */
-    configure(componentRef, config) {
+    configure(componentRef, config, mergeConfig = true) {
         if (!this.isProvided(componentRef)) {
             throw new Error(`Cannot configure component '${componentRef.toString()}' because it is not provided`);
         }
-        
-        this.dependencyProviders[componentRef].setConfig(config);
+
+        if (mergeConfig) {
+            this.dependencyProviders[componentRef].mergeConfig(config);
+        } else {
+            this.dependencyProviders[componentRef].setConfig(config);
+        }
     }
 
     /**
@@ -61,7 +66,7 @@ export default class DiContainer {
     }
 
     /**
-     * @param {symbol|string} componentRef 
+     * @param {symbol|string} componentRef
      * @returns {boolean}
      */
     isInitialized(componentRef) {
@@ -69,7 +74,7 @@ export default class DiContainer {
     }
 
     /**
-     * @param {symbol|string} componentRef 
+     * @param {symbol|string} componentRef
      * @returns {boolean}
      */
     isProvided(componentRef) {
@@ -122,7 +127,7 @@ export default class DiContainer {
                 let requestChain = e.requestingComponentsChain.reverse()
                     .map((e) => e.toString())
                     .join(' -> ');
-                console.error(`Cyclic dependency found ${requestChain} -> ${e.requiredComponent}`); 
+                console.error(`Cyclic dependency found ${requestChain} -> ${e.requiredComponent}`);
             }
             throw e;
         }

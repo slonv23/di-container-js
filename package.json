@@ -1,6 +1,6 @@
 {
   "name": "di-container-js",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Dependency injection library for js",
   "main": "lib.node.js",
   "module": "index.js",
@@ -10,7 +10,7 @@
   },
   "scripts": {
     "watch": "webpack --watch",
-    "build": "webpack && npx babel-cli .\\src --plugins=babel-plugin-transform-class-properties --out-dir dist && node tools/copy.js",
+    "build": "webpack && npx babel-cli src --plugins=babel-plugin-transform-class-properties --out-dir dist && node tools/copy.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
