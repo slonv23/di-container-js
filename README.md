@@ -83,3 +83,23 @@ diContainer.configure("testDependency", {configKey: "configValue"});
     // do something
 })();
 ```
+## Version 0.3.0 enhancements
+
+- You can now force recreation of particular registered component
+  by passing `true` as second argument to `diContainer.get` function, e.g.:
+
+    ```
+    let testDependency1 = await diContainer.get("testDependency", true);
+    let testDependency2 = await diContainer.get("testDependency", true);
+    // testDependency1 !== testDependency2
+    ```
+- You can intialize custom not registered component by using `diContainer.constructExternal`
+
+    ```
+    class TestExternal {
+    ...
+    }
+  
+    // create instance of TestExternal and inject dependencies
+    const testExternal = diContainer.constructExternal(TestExternal);
+    ```
