@@ -12,7 +12,7 @@ export default class DependencyGraph {
     nodes = [];
 
     /**
-     * @param {string} [dependencyRef]
+     * @param {string|null} [dependencyRef]
      * @param {number} level 
      */
     constructor(dependencyRef, level = 0) {

@@ -6,6 +6,8 @@ export default class ComponentProvider {
 
     classRef;
 
+    className;
+
     constructor(classRef, config) {
         if (typeof(classRef.dependencies) === "function") {
             this.dependencies = classRef.dependencies();
@@ -24,6 +26,7 @@ export default class ComponentProvider {
         }
         this.classRef = classRef;
         this.config = config;
+        this.className = classRef.constructor.name;
     }
 
     /**

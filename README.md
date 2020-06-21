@@ -65,7 +65,7 @@ class TestClass {
     postConstruct(config) {
         // gets called by DI container after instance created
         // can return promise, in this case DI container will
-        // wait util promise resolved
+        // wait until promise resolved
         return Promise.resolved();
     }
 

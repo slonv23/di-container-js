@@ -23,7 +23,7 @@ export default class DiContainer {
      */
     register(componentRef, componentProvider) {
         if (componentRef === diContainerRef) {
-            throw new Error(`"${diContainerRef}" is not owerwritable component`);
+            throw new Error(`"${diContainerRef}" is not overridable component`);
         }
         this.dependencyProviders[componentRef] = componentProvider;
     }
@@ -56,14 +56,20 @@ export default class DiContainer {
 
     /**
      * @param {symbol|string} componentRef
+     * @param {boolean} createNewInstance
      * @returns {Promise<any>}
      */
-    get(componentRef) {
-        if (!this.isInitialized(componentRef)) {
+    get(componentRef, createNewInstance = false) {
+        if (createNewInstance || !this.isInitialized(componentRef)) {
             return this._initInstance(componentRef).then(() => this.instances[componentRef]);
         }
 
         return this.instances[componentRef];
+    }
+
+    constructExternal(classRef, config) {
+        const provider = new ComponentProvider(classRef, config);
+        return this._initInstance('', provider);
     }
 
     /**
@@ -82,8 +88,15 @@ export default class DiContainer {
         return Object.prototype.hasOwnProperty.call(this.dependencyProviders, componentRef);
     }
 
-    async _initInstance(componentRef) {
-        const dependencyGraph = this._buildDependencyGraph(componentRef)
+    async _initInstance(componentRef = '', provider = null) {
+        let external = false;
+        if (provider) {
+            external = true;
+        } else {
+            provider = this.dependencyProviders[componentRef];
+        }
+
+        const dependencyGraph = this._buildDependencyGraph(componentRef, provider);
 
         let lowestLevel = dependencyGraph.nodes.reduce((p, v) => {
             return (p.level > v.level ? p : v);
@@ -93,35 +106,45 @@ export default class DiContainer {
             // init components on the lowest level first, because they don't have dependencies
             for (let j = 0; j < dependencyGraph.nodes.length; j++) {
                 let node = dependencyGraph.nodes[j];
-                if (node.level === i && !this.isInitialized(node.dependencyRef)) {
-                    let resolvedDependencies = [];
-                    for (let k = j + 1; k < dependencyGraph.nodes.length; k++) {
-                        let childNode = dependencyGraph.nodes[k];
-                        if (childNode.level <= node.level) {
-                            // not a child node, all child nodes are passed
-                            break;
-                        }
-                        if (childNode.level > (node.level + 1)) {
-                            // not a direct child node
-                            continue;
-                        }
+                if (node.level === i && (i === 0 || !this.isInitialized(node.dependencyRef))) {
+                    let resolvedDependencies = this._resolveDependencies(dependencyGraph, node.level, j + 1);
 
-                        console.assert((childNode.dependencyRef in this.instances),
-                            "Attempting to get dependency to inject into parent node, but it is not initialized");
-
-                        resolvedDependencies.push(this.instances[childNode.dependencyRef]);
+                    if (i === 0 && external) {
+                        return await provider.provide(...resolvedDependencies);
+                    } else {
+                        this.instances[node.dependencyRef] = await this.dependencyProviders[node.dependencyRef].provide(...resolvedDependencies);
                     }
-
-                    this.instances[node.dependencyRef] = await this.dependencyProviders[node.dependencyRef].provide(...resolvedDependencies);
                 }
             }
         }
     }
 
-    _buildDependencyGraph(dependencyRef) {
+    _resolveDependencies(dependencyGraph, parentNodeLevel, startNodeIndex) {
+        let resolvedDependencies = [];
+        for (let k = startNodeIndex; k < dependencyGraph.nodes.length; k++) {
+            let childNode = dependencyGraph.nodes[k];
+            if (childNode.level <= parentNodeLevel) {
+                // not a child node, all child nodes are passed
+                break;
+            }
+            if (childNode.level > (parentNodeLevel + 1)) {
+                // not a direct child node
+                continue;
+            }
+
+            console.assert((childNode.dependencyRef in this.instances),
+                "Attempting to get dependency to inject into parent node, but it is not initialized");
+
+            resolvedDependencies.push(this.instances[childNode.dependencyRef]);
+        }
+
+        return resolvedDependencies;
+    }
+
+    _buildDependencyGraph(dependencyRef, provider) {
         const dependencyGraph = new DependencyGraph();
         try {
-            this._addDependencySubGraph(dependencyRef, dependencyGraph, 0);
+            this._addDependencySubGraph(dependencyRef, provider, dependencyGraph, 0);
             return dependencyGraph;
         } catch (e) {
             if (e instanceof CyclicDependencyError) {
@@ -134,28 +157,33 @@ export default class DiContainer {
         }
     }
 
-    _addDependencySubGraph(dependencyRef, superGraph, level) {
+    _addDependencySubGraph(dependencyRef, dependencyProvider, superGraph, level) {
         let dependencySubGraph;
-        if (this.dependencyGraphs[dependencyRef]) {
-            if (this.dependencyGraphs[dependencyRef].level() < level) {
-                throw new CyclicDependencyError(dependencyRef);
+        if (dependencyRef) {
+            if (this.dependencyGraphs[dependencyRef]) {
+                if (this.dependencyGraphs[dependencyRef].level() < level) {
+                    throw new CyclicDependencyError(dependencyRef);
+                }
+                dependencySubGraph = this.dependencyGraphs[dependencyRef];
+                superGraph.addDependencies(dependencySubGraph, level);
+                return;
             }
-            dependencySubGraph = this.dependencyGraphs[dependencyRef];
-            superGraph.addDependencies(dependencySubGraph, level);
-            return;
+
+            dependencySubGraph = new DependencyGraph(dependencyRef, level);
+            this.dependencyGraphs[dependencyRef] = dependencySubGraph;
+        } else {
+            dependencyRef = dependencyProvider.className;
+            dependencySubGraph = new DependencyGraph(dependencyRef, level);
         }
 
-        dependencySubGraph = new DependencyGraph(dependencyRef, level);
-        this.dependencyGraphs[dependencyRef] = dependencySubGraph;
-
-        if (this.dependencyProviders[dependencyRef]) {
-            this.dependencyProviders[dependencyRef].getDependencies().forEach(arg => {
+        if (dependencyProvider) {
+            dependencyProvider.getDependencies().forEach(arg => {
                 if (!this.instances[arg] && !this.isProvided(arg)) {
                     throw new Error(`Unsatisfied dependency '${arg.toString()}' for component '${dependencyRef.toString()}'`);
                 }
 
                 try {
-                    this._addDependencySubGraph(arg, dependencySubGraph, level + 1);
+                    this._addDependencySubGraph(arg, this.dependencyProviders[arg], dependencySubGraph, level + 1);
                 } catch (e) {
                     if (e instanceof CyclicDependencyError) {
                         e.requestingComponentsChain.push(dependencyRef);
