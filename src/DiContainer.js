@@ -10,6 +10,7 @@ export default class DiContainer {
 
     dependencyProviders = {};
 
+    /** @type {{string: DependencyGraph}} */
     dependencyGraphs = {};
 
     constructor() {
@@ -140,7 +141,7 @@ export default class DiContainer {
                 throw new CyclicDependencyError(dependencyRef);
             }
             dependencySubGraph = this.dependencyGraphs[dependencyRef];
-            superGraph.addDependencies(dependencySubGraph);
+            superGraph.addDependencies(dependencySubGraph, level);
             return;
         }
 
