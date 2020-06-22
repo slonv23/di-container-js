@@ -72,6 +72,10 @@ export default class DiContainer {
         return this._initInstance('', provider);
     }
 
+    constructExternalUsingProvider(provider) {
+        return this._initInstance('', provider);
+    }
+
     /**
      * @param {symbol|string} componentRef
      * @returns {boolean}
