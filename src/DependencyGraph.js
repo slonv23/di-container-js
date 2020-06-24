@@ -13,7 +13,7 @@ export default class DependencyGraph {
 
     /**
      * @param {string|null} [dependencyRef]
-     * @param {number} level 
+     * @param {number} level
      */
     constructor(dependencyRef, level = 0) {
         if (dependencyRef) {
