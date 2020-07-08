@@ -165,7 +165,7 @@ export default class DiContainer {
         let dependencySubGraph;
         if (dependencyRef) {
             if (this.dependencyGraphs[dependencyRef]) {
-                this._checkForCyclicDependencies(dependencyRef, superGraph);
+                this._checkForCyclicDependencies(dependencyRef, superGraph, level);
 
                 dependencySubGraph = this.dependencyGraphs[dependencyRef];
                 superGraph.addDependencies(dependencySubGraph, level);
@@ -200,9 +200,8 @@ export default class DiContainer {
         superGraph.addDependencies(dependencySubGraph);
     }
 
-    _checkForCyclicDependencies(dependencyRef, superGraph) {
+    _checkForCyclicDependencies(dependencyRef, superGraph, currentLevel) {
         const nodesCount = superGraph.nodes.length;
-        let currentLevel = superGraph.nodes[nodesCount - 1].level;
         /** @type {CyclicDependencyError} */
         let err = null;
 
