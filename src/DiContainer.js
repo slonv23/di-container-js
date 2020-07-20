@@ -161,23 +161,10 @@ export default class DiContainer {
         }
     }
 
-    _addDependencySubGraph(dependencyRef, dependencyProvider, superGraph, level) {
-        let dependencySubGraph;
-        if (dependencyRef) {
-            if (this.dependencyGraphs[dependencyRef]) {
-                this._checkForCyclicDependencies(dependencyRef, superGraph, level);
+    _addDependencySubGraph(dependencyRef, dependencyProvider, dependencyGraph, level) {
+        this._checkForCyclicDependencies(dependencyRef, dependencyGraph, level);
 
-                dependencySubGraph = this.dependencyGraphs[dependencyRef];
-                superGraph.addDependencies(dependencySubGraph, level);
-                return;
-            }
-
-            dependencySubGraph = new DependencyGraph(dependencyRef, level);
-            this.dependencyGraphs[dependencyRef] = dependencySubGraph;
-        } else {
-            dependencyRef = dependencyProvider.className;
-            dependencySubGraph = new DependencyGraph(dependencyRef, level);
-        }
+        dependencyGraph.pushNode({level, dependencyRef});
 
         if (dependencyProvider) {
             dependencyProvider.getDependencies().forEach(arg => {
@@ -186,7 +173,7 @@ export default class DiContainer {
                 }
 
                 try {
-                    this._addDependencySubGraph(arg, this.dependencyProviders[arg], dependencySubGraph, level + 1);
+                    this._addDependencySubGraph(arg, this.dependencyProviders[arg], dependencyGraph, level + 1);
                 } catch (e) {
                     if (e instanceof CyclicDependencyError) {
                         e.requestingComponentsChain.push(dependencyRef);
@@ -196,32 +183,22 @@ export default class DiContainer {
                 }
             });
         }
-
-        superGraph.addDependencies(dependencySubGraph);
     }
 
     _checkForCyclicDependencies(dependencyRef, superGraph, currentLevel) {
         const nodesCount = superGraph.nodes.length;
-        /** @type {CyclicDependencyError} */
-        let err = null;
 
         for (let i = nodesCount - 1; i >= 0; i--) {
             const node = superGraph.nodes[i];
             if (node.level < currentLevel) {
                 currentLevel = node.level;
-            } else if (node.level > currentLevel) {
+            } else if (node.level >= currentLevel) {
                 continue;
             }
 
-            if (err) {
-                err.requestingComponentsChain.push(node.dependencyRef);
-            } else if (node.dependencyRef === dependencyRef) {
-                err = new CyclicDependencyError(dependencyRef);
+            if (dependencyRef !== 'diContainer' && node.dependencyRef === dependencyRef) {
+                throw new CyclicDependencyError(dependencyRef);
             }
-        }
-
-        if (err) {
-            throw err;
         }
     }
 

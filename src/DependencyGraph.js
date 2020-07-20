@@ -50,6 +50,13 @@ export default class DependencyGraph {
         return this;
     }
 
+    /**
+     * @param {Node} node
+     */
+    pushNode(node) {
+        this.nodes.push(node);
+    }
+
     level() {
         return this.nodes.length ? this.nodes[0].level : -1;
     }
