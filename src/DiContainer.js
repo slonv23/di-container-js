@@ -39,6 +39,14 @@ export default class DiContainer {
 
     /**
      * @param {symbol|string} componentRef
+     * @param {any} instance
+     */
+    provide(componentRef, instance) {
+        this.instances[componentRef] = instance;
+    }
+
+    /**
+     * @param {symbol|string} componentRef
      * @param {object} config
      * @param {boolean} mergeConfig
      */
@@ -67,6 +75,11 @@ export default class DiContainer {
         return this.instances[componentRef];
     }
 
+    /**
+     * @param {Function} classRef
+     * @param {object} config
+     * @returns {Promise<*|undefined>}
+     */
     constructExternal(classRef, config) {
         const provider = new ComponentProvider(classRef, config);
         return this._initInstance('', provider);

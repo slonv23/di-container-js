@@ -5,6 +5,7 @@ declare module 'di-container-js' {
         get(componentRef: symbol|string, createNewInstance: boolean): Promise<any>;
         constructExternal(classRef: Function, config?: object): Promise<any>;
         constructExternalUsingProvider(provider: any): Promise<any>;
+        provide(componentRef: symbol|string, instance: any): void;
     }
 
     export = DiContainer
