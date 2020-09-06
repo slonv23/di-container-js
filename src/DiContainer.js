@@ -1,6 +1,10 @@
-import CyclicDependencyError from "./CyclicDependencyError";
-import DependencyGraph from "./DependencyGraph";
+/**
+ * @typedef {import('./ComponentFactory').default} ComponentFactory
+ */
+import DependencyGraph from "./util/dependency-graph/DependencyGraph";
 import ComponentProvider from "./ComponentProvider";
+import Node from "./util/dependency-graph/Node";
+import ComponentFactoryProvider from "./ComponentFactoryProvider";
 
 const diContainerRef = "diContainer";
 
@@ -18,8 +22,9 @@ export default class DiContainer {
     }
 
     /**
-     * @param {symbol|string} componentRef
-     * @param {ComponentProvider} componentProvider
+     * @description Register a dependency using the ComponentProvider
+     * @param {symbol|string} componentRef - dependency identifier
+     * @param {ComponentProvider} componentProvider - provider which is used to construct a dependency instance
      */
     register(componentRef, componentProvider) {
         if (componentRef === diContainerRef) {
@@ -29,15 +34,20 @@ export default class DiContainer {
     }
 
     /**
-     * @param {symbol|string} componentRef
+     * @description Register a dependency using a class reference
+     * @param {symbol|string} componentRef - dependency identifier
      * @param {Function} classRef - reference to a class
-     * @param {object} [config]
+     * @param {object} [config] - configuration object which is passed to the postConstruct method of a class after it's creation
      */
     registerClass(componentRef, classRef, config) {
+        if (componentRef === '') {
+            throw new Error('\'componentRef\' could not be empty string');
+        }
         this.register(componentRef, new ComponentProvider(classRef, config));
     }
 
     /**
+     * @description Provide a component instance
      * @param {symbol|string} componentRef
      * @param {any} instance
      */
@@ -46,9 +56,10 @@ export default class DiContainer {
     }
 
     /**
+     * @description Sets a configuration object which will be passed to 'postConstruct' method of a component
      * @param {symbol|string} componentRef
      * @param {object} config
-     * @param {boolean} mergeConfig
+     * @param {boolean} mergeConfig - whenever merge new config to old one
      */
     configure(componentRef, config, mergeConfig = true) {
         if (!this.isProvided(componentRef)) {
@@ -63,19 +74,20 @@ export default class DiContainer {
     }
 
     /**
+     * @description Retrieve a component instance
      * @param {symbol|string} componentRef
-     * @param {boolean} createNewInstance
      * @returns {Promise<any>}
      */
-    get(componentRef, createNewInstance = false) {
-        if (createNewInstance || !this.isInitialized(componentRef)) {
-            return this._initInstance(componentRef).then(() => this.instances[componentRef]);
+    get(componentRef) {
+        if (!this.isInitialized(componentRef)) {
+            return this._initInstance(componentRef);
         }
 
         return this.instances[componentRef];
     }
 
     /**
+     * @description Construct an instance of a class without registration in the DI container
      * @param {Function} classRef
      * @param {object} config
      * @returns {Promise<*|undefined>}
@@ -85,7 +97,24 @@ export default class DiContainer {
         return this._initInstance('', provider);
     }
 
+    /**
+     * @description Construct a component without registration in the DI container
+     * @param {ComponentProvider} provider
+     * @returns {Promise<*|undefined>}
+     */
     constructExternalUsingProvider(provider) {
+        return this._initInstance('', provider);
+    }
+
+    /**
+     * @description Create a factory for a class.
+     * A factory allows to create multiple instances of a class and inject dependencies to them.
+     * A factory itself is not registered in DI container
+     * @param {Function} classRef
+     * @returns {Promise<ComponentFactory>}
+     */
+    createFactory(classRef) {
+        const provider = new ComponentFactoryProvider(classRef);
         return this._initInstance('', provider);
     }
 
@@ -106,49 +135,36 @@ export default class DiContainer {
     }
 
     async _initInstance(componentRef = '', provider = null) {
-        let external = false;
-        if (provider) {
-            external = true;
-        } else {
-            provider = this.dependencyProviders[componentRef];
-        }
+        try {
+            const dependencyGraph = this._buildDependencyGraph(componentRef, provider);
 
-        const dependencyGraph = this._buildDependencyGraph(componentRef, provider);
-
-        let lowestLevel = dependencyGraph.nodes.reduce((p, v) => {
-            return (p.level > v.level ? p : v);
-        }, dependencyGraph.nodes[0]).level;
-
-        for (let i = lowestLevel; i >= 0; i--) {
-            // init components on the lowest level first, because they don't have dependencies
-            for (let j = 0; j < dependencyGraph.nodes.length; j++) {
-                let node = dependencyGraph.nodes[j];
-                if (node.level === i && (i === 0 || !this.isInitialized(node.dependencyRef))) {
-                    let resolvedDependencies = this._resolveDependencies(dependencyGraph, node.level, j + 1);
-
-                    if (i === 0 && external) {
-                        return await provider.provide(...resolvedDependencies);
-                    } else {
-                        this.instances[node.dependencyRef] = await this.dependencyProviders[node.dependencyRef].provide(...resolvedDependencies);
-                    }
+            const it = dependencyGraph.makeIterator((node) => {
+                return !this.isInitialized(node.dependencyRef);
+            });
+            for (const node of it) {
+                if (node === dependencyGraph.rootNode && provider) {
+                    // construct external component
+                    return await provider.provide(...this._resolveDependencies(node));
+                } else {
+                    this.instances[node.dependencyRef] = await this.dependencyProviders[node.dependencyRef].provide(...this._resolveDependencies(node));
                 }
             }
+
+            return this.instances[componentRef];
+        } catch (err) {
+            console.error(err.toString());
+            throw err;
         }
     }
 
-    _resolveDependencies(dependencyGraph, parentNodeLevel, startNodeIndex) {
+    /**
+     * @param {Node} node
+     * @returns {Array}
+     * @private
+     */
+    _resolveDependencies(node) {
         let resolvedDependencies = [];
-        for (let k = startNodeIndex; k < dependencyGraph.nodes.length; k++) {
-            let childNode = dependencyGraph.nodes[k];
-            if (childNode.level <= parentNodeLevel) {
-                // not a child node, all child nodes are passed
-                break;
-            }
-            if (childNode.level > (parentNodeLevel + 1)) {
-                // not a direct child node
-                continue;
-            }
-
+        for (const childNode of node.children) {
             console.assert((childNode.dependencyRef in this.instances),
                 "Attempting to get dependency to inject into parent node, but it is not initialized");
 
@@ -159,58 +175,61 @@ export default class DiContainer {
     }
 
     _buildDependencyGraph(dependencyRef, provider) {
-        const dependencyGraph = new DependencyGraph();
-        try {
-            this._addDependencySubGraph(dependencyRef, provider, dependencyGraph, 0);
-            return dependencyGraph;
-        } catch (e) {
-            if (e instanceof CyclicDependencyError) {
-                let requestChain = e.requestingComponentsChain.reverse()
-                    .map((e) => e.toString())
-                    .join(' -> ');
-                console.error(`Cyclic dependency found ${requestChain} -> ${e.requiredComponent}`);
+        let external = false;
+        if (provider) {
+            external = true;
+        } else {
+            if (this.dependencyGraphs[dependencyRef]) {
+                return this.dependencyGraphs[dependencyRef];
             }
-            throw e;
+            if (!this.isProvided(dependencyRef)) {
+                throw new Error(`No provider defined for '${dependencyRef.toString()}' component`);
+            }
+            provider = this.dependencyProviders[dependencyRef];
         }
+
+        const rootNode = new Node(dependencyRef);
+        const dependencyGraph = new DependencyGraph(rootNode);
+        if (!external) {
+            this.dependencyGraphs[dependencyRef] = dependencyGraph;
+        }
+
+        this._buildDependencyGraphRecursive(rootNode, provider);
+
+        return dependencyGraph;
     }
 
-    _addDependencySubGraph(dependencyRef, dependencyProvider, dependencyGraph, level) {
-        this._checkForCyclicDependencies(dependencyRef, dependencyGraph, level);
+    /**
+     * @param {Node} rootNode
+     * @param {ComponentProvider} provider
+     * @private
+     */
+    _buildDependencyGraphRecursive(rootNode, provider) {
+        /** @type {{node: Node, dependencyRef: string, provider: ComponentProvider}[]} */
+        const unprocessedComponents = [
+            {node: rootNode, dependencyRef: rootNode.dependencyRef, provider}
+        ];
 
-        dependencyGraph.pushNode({level, dependencyRef});
-
-        if (dependencyProvider) {
-            dependencyProvider.getDependencies().forEach(arg => {
-                if (!this.instances[arg] && !this.isProvided(arg)) {
-                    throw new Error(`Unsatisfied dependency '${arg.toString()}' for component '${dependencyRef.toString()}'`);
+        let component;
+        while ((component = unprocessedComponents.pop())) {
+            const dependencies = component.provider.getDependencies();
+            for (const dependencyRef of dependencies) {
+                if (!this.instances[dependencyRef] && !this.isProvided(dependencyRef)) {
+                    throw new Error(`Unsatisfied dependency '${dependencyRef.toString()}' for component '${component.dependencyRef.toString()}'`);
                 }
 
-                try {
-                    this._addDependencySubGraph(arg, this.dependencyProviders[arg], dependencyGraph, level + 1);
-                } catch (e) {
-                    if (e instanceof CyclicDependencyError) {
-                        e.requestingComponentsChain.push(dependencyRef);
-                    }
+                let node;
+                if (!this.dependencyGraphs[dependencyRef]) {
+                    node = new Node(dependencyRef);
+                    const provider = this.dependencyProviders[dependencyRef];
 
-                    throw e;
+                    this.dependencyGraphs[dependencyRef] = new DependencyGraph(node);
+                    unprocessedComponents.push({node, dependencyRef, provider})
+                } else {
+                    node = this.dependencyGraphs[dependencyRef].rootNode;
                 }
-            });
-        }
-    }
 
-    _checkForCyclicDependencies(dependencyRef, superGraph, currentLevel) {
-        const nodesCount = superGraph.nodes.length;
-
-        for (let i = nodesCount - 1; i >= 0; i--) {
-            const node = superGraph.nodes[i];
-            if (node.level < currentLevel) {
-                currentLevel = node.level;
-            } else if (node.level >= currentLevel) {
-                continue;
-            }
-
-            if (dependencyRef !== 'diContainer' && node.dependencyRef === dependencyRef) {
-                throw new CyclicDependencyError(dependencyRef);
+                component.node.addChild(node);
             }
         }
     }

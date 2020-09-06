@@ -1,6 +1,6 @@
 {
   "name": "di-container-js",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "description": "Dependency injection library for js",
   "main": "lib.node.js",
   "module": "index.js",
@@ -11,7 +11,7 @@
   "scripts": {
     "watch": "webpack --watch",
     "build": "webpack && npx babel-cli src --plugins=babel-plugin-transform-class-properties --out-dir dist && node tools/copy.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest"
   },
   "keywords": [
     "DI",
@@ -34,7 +34,13 @@
     "eslint": "^6.6.0",
     "eslint-plugin-jsdoc": "^17.1.1",
     "install": "^0.12.2",
+    "jest": "^26.4.2",
     "webpack": "^4.41.2",
     "webpack-cli": "^3.3.10"
+  },
+  "jest": {
+    "modulePathIgnorePatterns": [
+      "<rootDir>/dist"
+    ]
   }
 }
