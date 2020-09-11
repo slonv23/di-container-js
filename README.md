@@ -1,4 +1,4 @@
-![Lint](https://github.com/slonv23/di-container-js/workflows/Lint/badge.svg?branch=master)
+![Lint](https://github.com/slonv23/di-container-js/workflows/Lint/badge.svg?branch=master) ![Tests](https://github.com/slonv23/di-container-js/workflows/Tests/badge.svg?branch=master)
 
 # DI container
 
