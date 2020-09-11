@@ -1,39 +1,29 @@
-import getArgNames from "./util/getArgNames";
+import extractDependencyRefs from "./util/extract-dependency-refs";
 
 export default class ComponentProvider {
 
-    dependencies = [];
+    /** @type {Array} */
+    dependencies;
 
+    /** @type {Function} */
     classRef;
 
+    /** @type {string} */
     className;
 
     constructor(classRef, config) {
-        if (typeof(classRef.dependencies) === "function") {
-            this.dependencies = classRef.dependencies();
-        } else {
-            this.dependencies = getArgNames(classRef.prototype.constructor);
-            // is constructor omitted?
-            let ancestor = Object.getPrototypeOf(classRef);
-            while (!this.dependencies.length) {
-                if (ancestor === Function.prototype) {
-                    // default constructor, no more ancestors
-                    break;
-                }
-                this.dependencies = getArgNames(ancestor.prototype.constructor);
-                ancestor = Object.getPrototypeOf(ancestor);
-            }
-        }
+        this.dependencies = extractDependencyRefs(classRef);
         this.classRef = classRef;
         this.config = config;
         this.className = classRef.constructor.name;
     }
 
     /**
+     * @param {Array} dependencies
      * @returns {Promise<*>}
      */
-    provide() {
-        let instance = new this.classRef(...arguments);
+    provide(...dependencies) {
+        let instance = this._createInstance(dependencies);
         if (typeof instance.postConstruct === 'function') {
             let result = instance.postConstruct(this.config);
             if (result instanceof Promise) {
@@ -58,6 +48,15 @@ export default class ComponentProvider {
 
     getDependencies() {
         return this.dependencies;
+    }
+
+    /**
+     * @param {Array} dependencies
+     * @returns {object}
+     * @private
+     */
+    _createInstance(dependencies) {
+        return new this.classRef(...dependencies);
     }
 
 }
