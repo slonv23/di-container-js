@@ -11,7 +11,8 @@
   "scripts": {
     "watch": "webpack --watch",
     "build": "webpack && npx babel-cli src --plugins=babel-plugin-transform-class-properties --out-dir dist && node tools/copy.js",
-    "test": "jest"
+    "test": "jest",
+    "eslint": "exit 0"
   },
   "keywords": [
     "DI",
