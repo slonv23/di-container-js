@@ -25,15 +25,13 @@ export default class DependencyGraph {
         do {
             if (!filter(currentNode)) {
                 switchToNextChild = true;
-            }
-
-            if (currentNode.children.length && !switchToNextChild) {
+            } else if (currentNode.children.length && !switchToNextChild) {
                 path.push(currentNode);
                 currentNode = currentNode.children[0];
                 continue;
+            } else {
+                yield currentNode;
             }
-
-            yield currentNode;
 
             const nextNodeIndex = currentNode.index + 1;
             if (nextNodeIndex < path[path.length - 1].children.length) {

@@ -14,8 +14,8 @@ export default class DiContainer {
 
     dependencyProviders = {};
 
-    /** @type {{string: DependencyGraph}} */
-    dependencyGraphs = {};
+    /** @type {object.<string, DependencyGraph>} */
+    dependencyGraphs = {diContainer: new DependencyGraph(new Node('diContainer'))};
 
     constructor() {
         this.instances[diContainerRef] = this;
