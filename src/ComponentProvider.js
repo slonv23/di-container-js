@@ -11,11 +11,15 @@ export default class ComponentProvider {
     /** @type {string} */
     className;
 
-    constructor(classRef, config) {
-        this.dependencies = extractDependencyRefs(classRef);
-        this.classRef = classRef;
+    /**
+     * @param {Function} object
+     * @param {*} [config]
+     */
+    constructor(object, config) {
+        this.classRef = object;
         this.config = config;
-        this.className = classRef.constructor.name;
+        this.className = object.constructor.name;
+        this.dependencies = this.extractDependencyRefs();
     }
 
     /**
@@ -48,6 +52,14 @@ export default class ComponentProvider {
 
     getDependencies() {
         return this.dependencies;
+    }
+
+    /**
+     * @returns {string|symbol[]}
+     * @protected
+     */
+    extractDependencyRefs() {
+        return extractDependencyRefs(this.classRef);
     }
 
     /**
